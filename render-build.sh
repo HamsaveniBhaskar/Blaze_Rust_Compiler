@@ -8,6 +8,10 @@ apt-get update
 apt-get install -y curl build-essential
 curl https://sh.rustup.rs -sSf | sh -s -- -y
 
+# Show the installed Rust version
+echo "Rust version:"
+rustc --version
+
 # Install Node.js dependencies
 npm install
 
