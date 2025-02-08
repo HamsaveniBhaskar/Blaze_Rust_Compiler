@@ -12,7 +12,6 @@ WORKDIR /app
 # Copy package files and install dependencies
 COPY package.json package-lock.json ./
 RUN npm install --production
-RUN rustc --version
 # Copy the rest of the app
 COPY . .
 
