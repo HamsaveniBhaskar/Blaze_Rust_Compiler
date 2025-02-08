@@ -12,32 +12,32 @@ parentPort.on("message", ({ code, input }) => {
     try {
         fs.writeFileSync(rustFile, code);
 
+        // Debug: Check if rustc is available
+        const rustcCheck = spawnSync("rustc", ["--version"], { encoding: "utf-8" });
+        if (rustcCheck.status !== 0) {
+            return parentPort.postMessage({ error: { fullError: `Rustc not found: ${rustcCheck.stderr.trim()}` } });
+        }
+
         // Compile Rust code
         const compileProcess = spawnSync("rustc", [rustFile, "-o", executable], { encoding: "utf-8" });
-        if (compileProcess.status !== 0) {
-            return parentPort.postMessage({
-                error: { fullError: `Compilation Error:\n${compileProcess.stderr}` },
-            });
+        const compileError = compileProcess.stderr.trim();
+        if (compileProcess.status !== 0 || compileError) {
+            return parentPort.postMessage({ error: { fullError: `Compilation Error:\n${compileError}` } });
         }
 
-        // Run Rust code
+        // Run Rust binary
         const execProcess = spawnSync(executable, { input, encoding: "utf-8", timeout: 2000 });
+        const execError = execProcess.stderr.trim();
+        const output = execProcess.stdout.trim();
 
-        // Clean up temporary files
         fs.rmSync(tmpDir, { recursive: true, force: true });
 
-        if (execProcess.status !== 0) {
-            return parentPort.postMessage({
-                error: { fullError: `Runtime Error:\n${execProcess.stderr}` },
-            });
+        if (execProcess.status !== 0 || execError) {
+            return parentPort.postMessage({ error: { fullError: `Runtime Error:\n${execError}` } });
         }
 
-        parentPort.postMessage({
-            output: execProcess.stdout.trim() || "No output received!",
-        });
+        parentPort.postMessage({ output: output || "No output received!" });
     } catch (err) {
-        parentPort.postMessage({
-            error: { fullError: `Server error: ${err.message}` },
-        });
+        parentPort.postMessage({ error: { fullError: `Server error: ${err.message}` } });
     }
 });
