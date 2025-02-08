@@ -12,28 +12,29 @@ parentPort.on("message", ({ code, input }) => {
     try {
         fs.writeFileSync(rustFile, code);
 
-        // Debug: Check if rustc is available
+        // Check if rustc is available
         const rustcCheck = spawnSync("rustc", ["--version"], { encoding: "utf-8" });
         if (rustcCheck.status !== 0) {
-            return parentPort.postMessage({ error: { fullError: `Rustc not found: ${rustcCheck.stderr.trim()}` } });
+            return parentPort.postMessage({ error: { fullError: `Rustc not found: ${rustcCheck.stderr || "Unknown error"}` } });
         }
 
         // Compile Rust code
         const compileProcess = spawnSync("rustc", [rustFile, "-o", executable], { encoding: "utf-8" });
-        const compileError = compileProcess.stderr.trim();
+        const compileError = compileProcess.stderr ? compileProcess.stderr.trim() : "";
         if (compileProcess.status !== 0 || compileError) {
-            return parentPort.postMessage({ error: { fullError: `Compilation Error:\n${compileError}` } });
+            return parentPort.postMessage({ error: { fullError: `Compilation Error:\n${compileError || "No error message provided"}` } });
         }
 
         // Run Rust binary
         const execProcess = spawnSync(executable, { input, encoding: "utf-8", timeout: 2000 });
-        const execError = execProcess.stderr.trim();
-        const output = execProcess.stdout.trim();
+        const execError = execProcess.stderr ? execProcess.stderr.trim() : "";
+        const output = execProcess.stdout ? execProcess.stdout.trim() : "";
 
+        // Clean up
         fs.rmSync(tmpDir, { recursive: true, force: true });
 
         if (execProcess.status !== 0 || execError) {
-            return parentPort.postMessage({ error: { fullError: `Runtime Error:\n${execError}` } });
+            return parentPort.postMessage({ error: { fullError: `Runtime Error:\n${execError || "No error message provided"}` } });
         }
 
         parentPort.postMessage({ output: output || "No output received!" });
